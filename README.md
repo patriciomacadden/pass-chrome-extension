@@ -40,7 +40,23 @@ into the sign in box (if any).
 
 ## Installing
 
+```bash
+$ git clone git@github.com:patriciomacadden/pass-chrome-extension.git
+$ cd pass-chrome-extension
+$ rake install
+```
+
+Then, manually install `pass-chrome-extension.crx` by dropping it in
+`chrome://extensions` page.
+
 ## Uninstalling
+
+```bash
+$ rake uninstall
+```
+
+Then, manually uninstall `pass-chrome-extension` from the `chrome://extensions`
+page.
 
 ## Contributing
 
