@@ -1,0 +1,132 @@
+require 'erb'
+
+desc 'Install pass-chrome-extension'
+task install: 'install:all'
+
+DAEMON_INSTALL_DIR = ENV['PREFIX'] || '/usr/local/bin'
+
+namespace :install do
+  task all: %i(prompt daemon agent chrome done)
+
+  task :prompt do
+    puts "\e[1m\e[32mpass-chrome-extension\e[0m"
+    puts "\e[1m-----\e[0m"
+    puts 'It will install:', ''
+    puts "1. passd(1) in #{DAEMON_INSTALL_DIR}"
+    puts '2. co.templ.pass-chrome-extension in ~/Library/LaunchAgents', ''
+    print 'Ok? (y/n) '
+
+    begin
+      until %w(k ok y yes n no).include?(answer = $stdin.gets.chomp.downcase)
+        puts '(psst... please type y or n)'
+        puts 'Install pass-chrome-extension? (y/n)'
+      end
+    rescue Interrupt
+      exit 1
+    end
+
+    exit 1 if answer =~ /n/
+  end
+
+  task :done do
+    if system('curl http://localhost:3131 &> /dev/null')
+      puts "\e[1m\e[32mpass-chrome-extension installation worked\e[0m"
+      #puts "open https://localhost:3131 in chrome to enable ssl"
+      #puts "then drop files like google.com.js in ~/.js and enjoy hacking the web"
+    else
+      puts "\e[31mpass-chrome-extension installation failed\e[0m"
+      puts 'check console.app or open an issue'
+    end
+  end
+
+  desc 'Install launch agent'
+  task :agent do
+    plist = 'co.templ.pass-chrome-extension.plist'
+    agent_dir = File.expand_path '~/Library/LaunchAgents/'
+    agent = File.join agent_dir, plist
+    Dir.mkdir agent_dir unless File.exists? agent_dir
+    File.open agent, 'w' do |f|
+      f.puts ERB.new(IO.read(plist)).result(binding)
+    end
+
+    chmod 0644, agent
+    puts 'starting passd...'
+    sh "launchctl load -w #{agent}"
+    # wait for server to start
+    sleep 5
+  end
+
+  desc 'Install pass-chrome-extension daemon'
+  task daemon: :install_dir_writeable do
+    cp 'bin/passd', DAEMON_INSTALL_DIR, verbose: true, preserve: true
+  end
+
+  desc 'Install Google Chrome extension'
+  task :chrome do
+    puts '', "\e[31mIMPORTANT!\e[0m Install the Google Chrome extension:"
+    puts 'http://bit.ly/pass-chrome-extension', ''
+  end
+end
+
+desc 'Uninstall pass-chrome-extension'
+task uninstall: 'uninstall:all'
+
+namespace :uninstall do
+  task :all => %i(prompt daemon agent chrome done)
+
+  task :prompt do
+    puts "\e[1m\e[32mpass-chrome-extension\e[0m"
+    puts "\e[1m-----\e[0m"
+    puts 'It will remove:', ''
+    puts "1. passd(1) from #{DAEMON_INSTALL_DIR}"
+    puts '2. co.templ.pass-chrome-extension from ~/Library/LaunchAgents'
+    puts '3. The "pass-chrome-extension" Google Chrome Extension', ''
+    print 'Ok? (y/n) '
+
+    begin
+      until %w(k ok y yes n no).include?(answer = $stdin.gets.chomp.downcase)
+        puts '(psst... please type y or n)'
+        puts 'Uninstall pass-chrome-extension? (y/n)'
+      end
+    rescue Interrupt
+      exit 1
+    end
+
+    exit 1 if answer =~ /n/
+  end
+
+  task :done do
+    if system('curl http://localhost:3131 &> /dev/null')
+      puts "\e[31mpass-chrome-extension uninstall failed\e[0m"
+      puts 'passd is still running'
+    else
+      puts "\e[1m\e[32mpass-chrome-extension uninstall worked\e[0m"
+    end
+  end
+
+  desc 'Uninstall launch agent'
+  task :agent do
+    plist = 'co.templ.pass-chrome-extension.plist'
+    agent = File.expand_path "~/Library/LaunchAgents/#{plist}"
+    sh "launchctl unload #{agent}"
+    rm agent, verbose: true
+  end
+
+  desc 'Uninstall pass-chrome-extension daemon'
+  task daemon: :install_dir_writeable do
+    rm File.join(DAEMON_INSTALL_DIR, 'passd'), verbose: true
+  end
+
+  desc 'Uninstall Google Chrome extension'
+  task :chrome do
+    puts "\e[1mplease uninstall the google chrome extension manually:\e[0m"
+    puts 'google chrome > window > extensions > pass-chrome-extension > uninstall'
+  end
+end
+
+# Check write permissions on DAEMON_INSTALL_DIR
+task :install_dir_writeable do
+  if !File.writable? DAEMON_INSTALL_DIR
+    abort "Error: Can't write to #{DAEMON_INSTALL_DIR}. Try again using `sudo`."
+  end
+end

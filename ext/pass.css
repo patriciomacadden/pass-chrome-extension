@@ -1,0 +1,9 @@
+#passwords {
+  width: 255px;
+  margin: 10px;
+}
+
+#passwords li img {
+  width: 16px;
+  margin-right: 10px;
+}
