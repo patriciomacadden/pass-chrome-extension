@@ -50,8 +50,7 @@ function getJSON(url, success, error) {
 
 document.addEventListener('DOMContentLoaded', function() {
   chrome.tabs.getSelected(null, function(tab) {
-    var url = tab.url;
-    url = url.split('/')[2].replace('www.', '');
+    var url = tldjs.getDomain(tab.url);
 
     getJSON('http://localhost:3131/domain/' + url, function(data) {
       if (data.length > 0) {
