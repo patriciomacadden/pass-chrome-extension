@@ -1,9 +1,11 @@
 {
   "manifest_version": 2,
 
-  "name": "pass",
-  "description": "Password Store",
+  "name": "pass-chrome-extension",
+  "description": "Chrome extension for zx2c4's pass",
   "version": "0.0.1",
+  "author": "Patricio Mac Adden",
+  "homepage_url": "https://github.com/patriciomacadden/pass-chrome-extension",
 
   "browser_action": {
     "default_icon": "icon.png",

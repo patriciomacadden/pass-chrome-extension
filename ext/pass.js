@@ -11,11 +11,11 @@ function appendListItem(content) {
 function fillInPassword() {
   var username = this.querySelector('span').innerHTML;
 
-  $.get('http://localhost:3131/pass/' + this.dataset['path'], function(data) {
+  getText('http://localhost:3131/pass/' + this.dataset['path'], function(data) {
     chrome.tabs.getSelected(null, function(tab) {
       chrome.tabs.executeScript(tab.id, { code: fillInScript(username, data.trim()) });
     });
-  });
+  }, null);
 }
 
 function fillInScript(username, password) {
@@ -28,23 +28,45 @@ function fillInScript(username, password) {
     "form.submit();";
 }
 
+function getText(url, success, error) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      success(xhr.responseText);
+    }
+  };
+
+  xhr.onerror = error;
+  xhr.send();
+}
+
+function getJSON(url, success, error) {
+  getText(url, function(data) {
+    success(JSON.parse(data));
+  }, error);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   chrome.tabs.getSelected(null, function(tab) {
     var url = tab.url;
     url = url.split('/')[2].replace('www.', '');
 
-    $.getJSON('http://localhost:3131/domain/' + url, function(data) {
+    getJSON('http://localhost:3131/domain/' + url, function(data) {
       if (data.length > 0) {
-        $.each(data, function(index, item) {
+        data.forEach(function(item) {
           var img = document.createElement('img');
           img.src = tab.favIconUrl;
-          var a = document.createElement('a');
-          a.href = 'javascript:;';
-          a.appendChild(img);
+
           var span = document.createElement('span');
           span.innerHTML = item.username;
-          a.appendChild(span);
+
+          var a = document.createElement('a');
+          a.href = 'javascript:;';
           a.dataset['path'] = item.path;
+          a.appendChild(img);
+          a.appendChild(span);
           a.addEventListener('click', fillInPassword);
 
           appendListItem(a);
@@ -52,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         appendListItem('There are no passwords for this website.');
       }
-    }).fail(function() {
+    }, function() {
       appendListItem('passd is not running.');
     });
   });
