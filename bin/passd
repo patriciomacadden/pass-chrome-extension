@@ -3,33 +3,33 @@
 require 'json'
 require 'webrick'
 
-class PassServlet < WEBrick::HTTPServlet::AbstractServlet
+class UsernameServlet < WEBrick::HTTPServlet::AbstractServlet
   def usernames(domain)
     Dir[File.join ENV['HOME'], '.password-store', '**', '*.gpg'].grep /#{domain}/
   end
 
-  def password(username)
-    `pass #{username}`
+  def do_GET(req, res)
+    usernames = usernames req.path.split('/')[2]
+    usernames.map! { |u| u.gsub(File.join(ENV['HOME'], '.password-store', ''), '').gsub('.gpg', '') }
+    items = usernames.map { |item| { username: item.split('/').last, path: item } }
+
+    res.status = 200
+    res['Content-Type'] = 'application/json'
+    res['Access-Control-Allow-Origin'] = '*'
+    res.body = JSON.dump items
+  end
+end
+
+class PasswordServlet < WEBrick::HTTPServlet::AbstractServlet
+  def password(path)
+    `pass #{path}`.chomp
   end
 
   def do_GET(req, res)
-    if req.path.start_with? '/domain/'
-      usernames = usernames req.path.split('/')[2]
-      usernames.map! { |u| u.gsub(File.join(ENV['HOME'], '.password-store', ''), '').gsub('.gpg', '') }
-
-      res.status = 200
-      res['Content-Type'] = 'application/json'
-      res['Access-Control-Allow-Origin'] = '*'
-      items = usernames.map { |item| { username: item.split('/').last, path: item } }
-      res.body = JSON.dump items
-    elsif req.path.start_with? '/pass/'
-      res.status = 200
-      res['Content-Type'] = 'text/plain'
-      res['Access-Control-Allow-Origin'] = '*'
-      res.body = password req.path.split('/')[2..-1].join('/')
-    else
-      [404, {}, []]
-    end
+    res.status = 200
+    res['Content-Type'] = 'text/plain'
+    res['Access-Control-Allow-Origin'] = '*'
+    res.body = password req.path.split('/')[2..-1].join('/')
   end
 end
 
@@ -40,7 +40,8 @@ options = {
 
 server = WEBrick::HTTPServer.new options
 
-server.mount '/', PassServlet
+server.mount '/domain', UsernameServlet
+server.mount '/pass', PasswordServlet
 
 %w(INT TERM).each do |sig|
   trap(sig) { server.shutdown }
