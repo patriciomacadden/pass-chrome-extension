@@ -14,6 +14,8 @@ function fillInPassword() {
   getText('http://localhost:3131/pass/' + this.dataset['path'], function(data) {
     chrome.tabs.getSelected(null, function(tab) {
       chrome.tabs.executeScript(tab.id, { code: fillInScript(username, data.trim()) });
+      // close the popup
+      window.close();
     });
   }, null);
 }
@@ -24,6 +26,7 @@ function fillInScript(username, password) {
     "var form = passwordInput.parentElement;" +
     "while (form.tagName != 'FORM') { form = form.parentElement; };" +
     "var usernameInput = form.querySelector('input[type=text]');" +
+    "if (usernameInput == undefined) { usernameInput = form.querySelector('input[type=email]'); };" +
     "usernameInput.value = '" + username + "';" +
     "form.submit();";
 }
